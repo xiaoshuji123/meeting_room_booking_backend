@@ -58,6 +58,22 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## nest-cli.json
+
+```json
+{
+  "collection": "@nestjs/schematics",
+  "generateOptions": {
+    "spec": false, // 不会生成测试代码
+    "flat": true // 不会生成多层目录
+  },
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+```
+
 ## Resources
 
 Check out a few resources that may come in handy when working with NestJS:
