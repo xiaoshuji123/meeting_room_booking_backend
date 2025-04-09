@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Role } from './role.entity';
 
 @Entity('user')
@@ -33,6 +41,7 @@ export class User {
   @Column({
     length: 255,
     comment: '头像',
+    nullable: true,
   })
   head_pic: string;
 
