@@ -69,7 +69,9 @@ $ npm run test:cov
   },
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "watchAssets": true, // 监听assets
+    "assets": ["**/*.env"] // 为什么这个 .env 文件不放在根目录下，是因为根目录下的配置文件不会自动复制到 dist 目录。如果我们想放在根目录的话，那可以手动加一下复制逻辑（build: "nest build && cp .env/dist"）
   }
 }
 ```
