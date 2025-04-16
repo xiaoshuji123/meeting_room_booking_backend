@@ -76,6 +76,12 @@ $ npm run test:cov
 }
 ```
 
+## 项目结构
+
+- dto(data transfer object) 是接收参数的，vo(view object) 是封装返回的数据的，entity 是和数据库表对应的。
+- controller 是控制器，service 是业务逻辑，repository 是数据库操作。
+- utils 是工具函数，config 是配置文件，middleware 是中间件，interceptor 是拦截器，filter 是过滤器，guard 是守卫，pipe 是管道。
+
 ## Resources
 
 Check out a few resources that may come in handy when working with NestJS:

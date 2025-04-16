@@ -3,6 +3,7 @@ import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { EmailService } from 'src/email/email.service';
 import { RedisService } from 'src/redis/redis.service';
+import { LoginUserDto } from './dto/login-user.dto';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -26,6 +27,23 @@ export class UserController {
     return {
       code: 200,
       message: '验证码发送成功',
+    };
+  }
+
+  @Post('init-data')
+  async initData() {
+    await this.userService.initData();
+    return '初始化数据成功';
+  }
+
+  @Post('login')
+  async login(@Body() loginDto: LoginUserDto) {
+    const user = await this.userService.login(loginDto);
+    
+    return {
+      code: 200,
+      message: '登录成功',
+      data: user,
     };
   }
 }

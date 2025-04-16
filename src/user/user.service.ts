@@ -7,6 +7,8 @@ import { RedisService } from 'src/redis/redis.service';
 import { md5 } from 'src/utils';
 import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
+import { LoginUserDto } from './dto/login-user.dto';
+import { LoginUserVo } from './vo/user.vo';
 @Injectable()
 export class UserService {
   private logger = new Logger();
@@ -98,5 +100,31 @@ export class UserService {
     await this.permissionRepository.save([permission1, permission2]);
     await this.roleRepository.save([role1, role2]);
     await this.userRepository.save([user1, user2]);
+  }
+
+  async login(loginDto: LoginUserDto) {
+    const { username, password } = loginDto;
+    const user = await this.userRepository.findOne({ where: { username }, relations: ['roles', 'roles.permissions'] });
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+    if (user.password !== md5(password)) {
+      throw new BadRequestException('密码错误');
+    }
+    const loginUserVo = new LoginUserVo();
+    loginUserVo.userInfo = {
+      id: user.id,
+      username: user.username,
+      nickName: user.nick_name,
+      email: user.email,
+      headPic: user.head_pic,
+      phone: user.phone,
+      isFrozen: user.is_frozen,
+      isAdmin: user.is_admin,
+      createdTime: user.created_time,
+      roles: user.roles.map(role => role.name),
+      permissions: user.roles.flatMap(role => role.permissions.map(permission => permission.code)),
+    };
+    return loginUserVo;
   }
 }

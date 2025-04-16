@@ -9,12 +9,12 @@ import { Permission } from './user/entities/permission.entity';
 import { RedisModule } from './redis/redis.module';
 import { EmailModule } from './email/email.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AdminModule } from './admin/admin.module';
+import { JwtModule } from '@nestjs/jwt';
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({ // forRootAsync 的方式 比 forRoot 更灵活，可配置
       useFactory: (configService: ConfigService) => {
-        console.log(configService.get('db_host'))
-        console.log( configService.get('db_password'))
         return {
           type: 'mysql',
           host: configService.get('db_host'),
@@ -34,13 +34,24 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       },
       inject: [ConfigService],
     }),
-    UserModule,
-    RedisModule,
-    EmailModule,
+    JwtModule.registerAsync({
+      global: true,
+      useFactory: (configService: ConfigService) => {
+        return {
+          secret: configService.get('jwt_secret'),
+          signOptions: { expiresIn: '30m' },
+        }
+      },
+      inject: [ConfigService],
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['src/.env'],
     }),
+    UserModule,
+    RedisModule,
+    EmailModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
