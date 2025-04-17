@@ -4,6 +4,7 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { EmailService } from 'src/email/email.service';
 import { RedisService } from 'src/redis/redis.service';
 import { LoginUserDto } from './dto/login-user.dto';
+
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -39,11 +40,30 @@ export class UserController {
   @Post('login')
   async login(@Body() loginDto: LoginUserDto) {
     const user = await this.userService.login(loginDto);
-    
+    const { accessToken, refreshToken } = await this.userService.generateToken({
+      id: user.userInfo.id,
+      username: user.userInfo.username,
+    });
+    user.accessToken = accessToken;
+    user.refreshToken = refreshToken;
+
     return {
       code: 200,
       message: '登录成功',
       data: user,
+    };
+  }
+
+  @Get('refresh-token')
+  async refreshToken(@Query('refreshToken') refreshToken: string) {
+    const { accessToken, refreshToken: newRefreshToken } = await this.userService.refreshToken(refreshToken);
+    return {
+      code: 200,
+      message: '刷新token成功',
+      data: {
+        accessToken,
+        refreshToken: newRefreshToken,
+      },
     };
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, Inject, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -9,6 +9,8 @@ import { Role } from './entities/role.entity';
 import { Permission } from './entities/permission.entity';
 import { LoginUserDto } from './dto/login-user.dto';
 import { LoginUserVo } from './vo/user.vo';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class UserService {
   private logger = new Logger();
@@ -21,8 +23,14 @@ export class UserService {
   @InjectRepository(Permission)
   private permissionRepository: Repository<Permission>;
 
+  @Inject(JwtService)
+  private jwtService: JwtService;
+
   @Inject()
   private redisService: RedisService;
+
+  @Inject(ConfigService)
+  private configService: ConfigService;
 
   async register({ email, captcha, username, nick_name, password }: RegisterUserDto) {
     // 1. 验证验证码
@@ -92,7 +100,7 @@ export class UserService {
 
     role1.permissions = [permission1, permission2];
     role2.permissions = [permission2];
-    
+
     // 不能打乱顺序，因为存在外键依赖关系:
     // 1. 角色依赖权限，所以必须先创建权限
     // 2. 用户依赖角色，所以必须先创建角色
@@ -122,9 +130,54 @@ export class UserService {
       isFrozen: user.is_frozen,
       isAdmin: user.is_admin,
       createdTime: user.created_time,
-      roles: user.roles.map(role => role.name),
-      permissions: user.roles.flatMap(role => role.permissions.map(permission => permission.code)),
+      roles: user.roles.map((role) => role.name),
+      permissions: user.roles.flatMap((role) => role.permissions.map((permission) => permission.code)),
     };
     return loginUserVo;
+  }
+
+  async generateToken(user: { id: number; username: string }) {
+    const accessToken = this.jwtService.sign(
+      {
+        userId: user.id,
+        username: user.username,
+      },
+      {
+        expiresIn: this.configService.get('jwt_access_token_expires_time') || '30m',
+      },
+    );
+    const refreshToken = this.jwtService.sign(
+      {
+        userId: user.id,
+      },
+      {
+        expiresIn: this.configService.get('jwt_refresh_token_expires_time') || '7d',
+      },
+    );
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async refreshToken(token: string) {
+    try {
+      const data = this.jwtService.verify(token);
+      const user = await this.userRepository.findOne({
+        where: { id: data.userId },
+        relations: ['roles', 'roles.permissions'],
+      });
+      const { accessToken, refreshToken } = await this.generateToken({
+        id: user.id,
+        username: user.username,
+      });
+      return {
+        accessToken,
+        refreshToken,
+      };
+    } catch (err) {
+      console.log(err);
+      throw new UnauthorizedException('token 已过期，请重新登录');
+    }
   }
 }
