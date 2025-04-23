@@ -8,34 +8,66 @@ import { Role } from './user/entities/role.entity';
 import { Permission } from './user/entities/permission.entity';
 import { RedisModule } from './redis/redis.module';
 import { EmailModule } from './email/email.module';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AdminModule } from './admin/admin.module';
+import { JwtModule } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
+import { LoginGuard } from './guards/login.guard';
+import { PermissionGuard } from './guards/permission.guard';
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost',
-      port: 3307,
-      username: 'root',
-      password: 'Coder123.',
-      database: 'meeting_room_booking_system',
-      entities: [User, Role, Permission],
-      synchronize: true,
-      logging: true,
-      poolSize: 10,
-      connectorPackage: 'mysql2',
-      extra: {
-        authPlugin: 'sha256_password',
+    TypeOrmModule.forRootAsync({
+      // forRootAsync 的方式 比 forRoot 更灵活，可配置
+      useFactory: (configService: ConfigService) => {
+        return {
+          type: 'mysql',
+          host: configService.get('db_host'),
+          port: configService.get('db_port'),
+          username: configService.get('db_username'),
+          password: configService.get('db_password'),
+          database: configService.get('db_database'),
+          entities: [User, Role, Permission],
+          synchronize: true,
+          logging: true,
+          poolSize: configService.get('db_poolSize'),
+          connectorPackage: 'mysql2',
+          extra: {
+            authPlugin: 'sha256_password',
+          },
+        };
       },
+      inject: [ConfigService],
+    }),
+    JwtModule.registerAsync({
+      global: true,
+      useFactory: (configService: ConfigService) => {
+        return {
+          secret: configService.get('jwt_secret'),
+          signOptions: { expiresIn: '30m' },
+        };
+      },
+      inject: [ConfigService],
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['src/.env'],
     }),
     UserModule,
     RedisModule,
     EmailModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: ['.env'],
-    }),
+    AdminModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: LoginGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
+    },
+  ],
 })
 export class AppModule {}

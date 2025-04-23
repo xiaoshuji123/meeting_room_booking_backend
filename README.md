@@ -69,10 +69,18 @@ $ npm run test:cov
   },
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "watchAssets": true, // 监听assets
+    "assets": ["**/*.env"] // 为什么这个 .env 文件不放在根目录下，是因为根目录下的配置文件不会自动复制到 dist 目录。如果我们想放在根目录的话，那可以手动加一下复制逻辑（build: "nest build && cp .env/dist"）
   }
 }
 ```
+
+## 项目结构
+
+- dto(data transfer object) 是接收参数的，vo(view object) 是封装返回的数据的，entity 是和数据库表对应的。
+- controller 是控制器，service 是业务逻辑，repository 是数据库操作。
+- utils 是工具函数，config 是配置文件，middleware 是中间件，interceptor 是拦截器，filter 是过滤器，guard 是守卫，pipe 是管道。
 
 ## Resources
 
