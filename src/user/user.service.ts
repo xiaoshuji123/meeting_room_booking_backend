@@ -136,11 +136,13 @@ export class UserService {
     return loginUserVo;
   }
 
-  async generateToken(user: { id: number; username: string }) {
+  async generateToken(user: { id: number; username: string; roles: string[]; permissions: string[] }) {
     const accessToken = this.jwtService.sign(
       {
         userId: user.id,
         username: user.username,
+        roles: user.roles,
+        permissions: user.permissions,
       },
       {
         expiresIn: this.configService.get('jwt_access_token_expires_time') || '30m',
@@ -170,6 +172,8 @@ export class UserService {
       const { accessToken, refreshToken } = await this.generateToken({
         id: user.id,
         username: user.username,
+        roles: user.roles.map((role) => role.name),
+        permissions: user.roles.flatMap((role) => role.permissions.map((permission) => permission.code)),
       });
       return {
         accessToken,

@@ -1,10 +1,9 @@
-import { Controller, Post, Body, Get, Query, Inject } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Inject, SetMetadata } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { EmailService } from 'src/email/email.service';
 import { RedisService } from 'src/redis/redis.service';
 import { LoginUserDto } from './dto/login-user.dto';
-
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -43,6 +42,8 @@ export class UserController {
     const { accessToken, refreshToken } = await this.userService.generateToken({
       id: user.userInfo.id,
       username: user.userInfo.username,
+      roles: user.userInfo.roles,
+      permissions: user.userInfo.permissions,
     });
     user.accessToken = accessToken;
     user.refreshToken = refreshToken;
@@ -65,5 +66,18 @@ export class UserController {
         refreshToken: newRefreshToken,
       },
     };
+  }
+
+  @Get('test')
+  @SetMetadata('require_login', false)
+  async test() {
+    return 'test';
+  }
+
+  @Get('test2')
+  @SetMetadata('require_login', true)
+  @SetMetadata('permissions', ['admin'])
+  async test2() {
+    return 'test2';
   }
 }

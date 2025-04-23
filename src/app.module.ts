@@ -11,9 +11,13 @@ import { EmailModule } from './email/email.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminModule } from './admin/admin.module';
 import { JwtModule } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
+import { LoginGuard } from './guards/login.guard';
+import { PermissionGuard } from './guards/permission.guard';
 @Module({
   imports: [
-    TypeOrmModule.forRootAsync({ // forRootAsync 的方式 比 forRoot 更灵活，可配置
+    TypeOrmModule.forRootAsync({
+      // forRootAsync 的方式 比 forRoot 更灵活，可配置
       useFactory: (configService: ConfigService) => {
         return {
           type: 'mysql',
@@ -30,7 +34,7 @@ import { JwtModule } from '@nestjs/jwt';
           extra: {
             authPlugin: 'sha256_password',
           },
-        }
+        };
       },
       inject: [ConfigService],
     }),
@@ -40,7 +44,7 @@ import { JwtModule } from '@nestjs/jwt';
         return {
           secret: configService.get('jwt_secret'),
           signOptions: { expiresIn: '30m' },
-        }
+        };
       },
       inject: [ConfigService],
     }),
@@ -54,6 +58,16 @@ import { JwtModule } from '@nestjs/jwt';
     AdminModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: LoginGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionGuard,
+    },
+  ],
 })
 export class AppModule {}
