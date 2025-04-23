@@ -1,9 +1,10 @@
-import { Controller, Post, Body, Get, Query, Inject, SetMetadata } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Inject } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { EmailService } from 'src/email/email.service';
 import { RedisService } from 'src/redis/redis.service';
 import { LoginUserDto } from './dto/login-user.dto';
+import { RequireLogin, RequirePermission, UserInfo } from 'src/decorator/custom.decorator';
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -69,15 +70,16 @@ export class UserController {
   }
 
   @Get('test')
-  @SetMetadata('require_login', false)
   async test() {
     return 'test';
   }
 
   @Get('test2')
-  @SetMetadata('require_login', true)
-  @SetMetadata('permissions', ['admin'])
-  async test2() {
+  @RequireLogin()
+  @RequirePermission('admin')
+  async test2(@UserInfo() user: any, @UserInfo('username') username: string) {
+    console.log('user', user);
+    console.log('username', username);
     return 'test2';
   }
 }
