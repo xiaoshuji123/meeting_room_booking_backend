@@ -39,7 +39,7 @@ export class User {
   email: string;
 
   @Column({
-    length: 255,
+    type: 'text',
     comment: '头像',
     nullable: true,
   })

@@ -11,6 +11,9 @@ import { LoginUserDto } from './dto/login-user.dto';
 import { LoginUserVo } from './vo/user.vo';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateInfoDto } from './dto/update-info.dto';
+import { EmailService } from 'src/email/email.service';
 @Injectable()
 export class UserService {
   private logger = new Logger();
@@ -28,6 +31,9 @@ export class UserService {
 
   @Inject()
   private redisService: RedisService;
+
+  @Inject(EmailService)
+  private emailService: EmailService;
 
   @Inject(ConfigService)
   private configService: ConfigService;
@@ -165,15 +171,12 @@ export class UserService {
   async refreshToken(token: string) {
     try {
       const data = this.jwtService.verify(token);
-      const user = await this.userRepository.findOne({
-        where: { id: data.userId },
-        relations: ['roles', 'roles.permissions'],
-      });
+      const user = await this.findUserDetailById(data.userId);
       const { accessToken, refreshToken } = await this.generateToken({
-        id: user.id,
-        username: user.username,
-        roles: user.roles.map((role) => role.name),
-        permissions: user.roles.flatMap((role) => role.permissions.map((permission) => permission.code)),
+        id: user.userInfo.id,
+        username: user.userInfo.username,
+        roles: user.userInfo.roles,
+        permissions: user.userInfo.permissions,
       });
       return {
         accessToken,
@@ -184,4 +187,98 @@ export class UserService {
       throw new UnauthorizedException('token 已过期，请重新登录');
     }
   }
+
+  async findUserDetailById(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['roles', 'roles.permissions'],
+    });
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+    const loginUserVo = new LoginUserVo();
+    loginUserVo.userInfo = {
+      id: user.id,
+      username: user.username,
+      nickName: user.nick_name,
+      email: user.email,
+      headPic: user.head_pic,
+      phone: user.phone,
+      isFrozen: user.is_frozen,
+      isAdmin: user.is_admin,
+      createdTime: user.created_time,
+      roles: user.roles.map((role) => role.name),
+      permissions: user.roles.flatMap((role) => role.permissions.map((permission) => permission.code)),
+    };
+    return loginUserVo;
+  }
+
+  async updatePassword(updatePasswordDto: UpdatePasswordDto) {
+    const { email, captcha, new_password } = updatePasswordDto;
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+    const redisCaptcha = await this.redisService.get(`update_password_${email}`);
+    if (!redisCaptcha) {
+      throw new BadRequestException('验证码不存在');
+    }
+    if (redisCaptcha !== captcha) {
+      throw new BadRequestException('验证码错误');
+    }
+    user.password = md5(new_password);
+    try {
+      await this.userRepository.save(user);
+      return '密码更新成功';
+    } catch (error) {
+      this.logger.error(error, UserService);
+      throw new BadRequestException('密码更新失败');
+    }
+  }
+
+  async updateInfo(userId: number, updateInfoDto: UpdateInfoDto) {
+    const { nick_name, captcha, email, avatar } = updateInfoDto;
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new BadRequestException('用户不存在');
+    }
+    const redisCaptcha = await this.redisService.get(`update_info_${email}`);
+    if (!redisCaptcha) {
+      throw new BadRequestException('验证码不存在');
+    }
+    if (redisCaptcha !== captcha) {
+      throw new BadRequestException('验证码错误');
+    }
+    if (nick_name) {
+      user.nick_name = nick_name; 
+    }
+    if (email) {
+      user.email = email;
+    }
+    if (avatar) {
+      user.head_pic = avatar;
+    }
+    try {
+      await this.userRepository.save(user);
+      return '信息更新成功';
+    } catch (error) {
+      this.logger.error(error, UserService);
+      throw new BadRequestException('信息更新失败');
+    }
+  }
+
+  async updatePasswordCaptcha(email: string) {
+    const code = Math.random().toString().slice(2, 8);
+    await this.redisService.set(`update_password_${email}`, code, 60 * 5);
+    await this.emailService.sendEmail(email, '更改密码验证码', `你的验证码是 ${code}`);
+    return '验证码发送成功';
+  }
+
+  async updateInfoCaptcha(email: string) {
+    const code = Math.random().toString().slice(2, 8);
+    await this.redisService.set(`update_info_${email}`, code, 60 * 5);
+    await this.emailService.sendEmail(email, '更改信息验证码', `你的验证码是 ${code}`);
+    return '验证码发送成功';
+  }
+  
 }
