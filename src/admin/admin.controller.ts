@@ -6,6 +6,7 @@ import { UserService } from 'src/user/user.service';
 import { UpdateInfoDto } from 'src/user/dto/update-info.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { EmailService } from 'src/email/email.service';
+import { UserListDto } from './dto/user-list.dto';
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -63,5 +64,16 @@ export class AdminController {
   @RequireLogin()
   async getUserInfo(@UserInfo('userId') userId: number) {
     return await this.userService.findUserDetailById(userId);
+  }
+
+  @Post('freeze')
+  @RequireLogin()
+  async freeze(@Body() freezeDto: { id: number }) {
+    return await this.adminService.freezeUserById(freezeDto.id);
+  }
+
+  @Post('user-list')
+  async userList(@Body() userListDto: UserListDto) {
+    return await this.adminService.userList(userListDto);
   }
 }
