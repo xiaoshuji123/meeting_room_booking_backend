@@ -4,6 +4,7 @@ import { User } from 'src/user/entities/user.entity';
 import { Repository } from 'typeorm';
 import { Like } from 'typeorm';
 import { UserListDto } from './dto/user-list.dto';
+import { UserListVo } from './vo/user.vo';
 
 @Injectable()
 export class AdminService {
@@ -36,9 +37,9 @@ export class AdminService {
       take: pageSize,
       where: condition,
     });
-    return {
-      total,
-      users,
-    };
+    const userVo = new UserListVo();
+    userVo.total = total;
+    userVo.users = users;
+    return userVo;
   }
 }
