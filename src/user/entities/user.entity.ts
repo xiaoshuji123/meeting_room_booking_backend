@@ -8,9 +8,10 @@ import {
   JoinTable,
 } from 'typeorm';
 import { Role } from './role.entity';
-
+import { ApiProperty } from '@nestjs/swagger';
 @Entity('user')
 export class User {
+  @ApiProperty({ description: '用户ID' })
   @PrimaryGeneratedColumn()
   id: number;
 
