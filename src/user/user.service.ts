@@ -214,10 +214,13 @@ export class UserService {
   }
 
   async updatePassword(updatePasswordDto: UpdatePasswordDto) {
-    const { email, captcha, new_password } = updatePasswordDto;
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) {
+    const { username, email, captcha, new_password } = updatePasswordDto;
+    const user = await this.userRepository.findOne({ where: { username } });
+    if (!user) {  
       throw new BadRequestException('用户不存在');
+    }
+    if (user.email !== email) {
+      throw new BadRequestException('邮箱不正确');
     }
     const redisCaptcha = await this.redisService.get(`update_password_${email}`);
     if (!redisCaptcha) {
