@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateInfoDto } from './dto/update-info.dto';
 import { EmailService } from 'src/email/email.service';
+import { isMobilePhone } from 'class-validator';
 @Injectable()
 export class UserService {
   private logger = new Logger();
@@ -240,7 +241,7 @@ export class UserService {
   }
 
   async updateInfo(userId: number, updateInfoDto: UpdateInfoDto) {
-    const { nick_name, captcha, email, avatar } = updateInfoDto;
+    const { nick_name, captcha, email, avatar, phone } = updateInfoDto;
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new BadRequestException('用户不存在');
@@ -260,6 +261,12 @@ export class UserService {
     }
     if (avatar) {
       user.head_pic = avatar;
+    }
+    if (phone) {
+      if (!isMobilePhone(phone, 'zh-CN')) {
+        throw new BadRequestException('手机号格式不正确');
+      }
+      user.phone = phone;
     }
     try {
       await this.userRepository.save(user);

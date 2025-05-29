@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsMobilePhone } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateInfoDto {
@@ -22,4 +22,14 @@ export class UpdateInfoDto {
     message: '验证码不能为空',
   })
   captcha: string;
+
+  @ApiProperty({ description: '手机号', required: false })
+  @IsMobilePhone(
+    'zh-CN',
+    {},
+    {
+      message: '不是合法的手机号格式',
+    },
+  )
+  phone: string;
 }

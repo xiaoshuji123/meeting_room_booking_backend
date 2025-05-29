@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, Inject, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Inject, HttpStatus, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { EmailService } from 'src/email/email.service';
@@ -7,9 +7,10 @@ import { LoginUserDto } from './dto/login-user.dto';
 import { RequireLogin, RequirePermission, UserInfo } from 'src/decorator/custom.decorator';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateInfoDto } from './dto/update-info.dto';
-import { ApiOperation, ApiTags, ApiBody, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBody, ApiResponse, ApiQuery, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { LoginUserVo } from './vo/user.vo';
-
+import { FileInterceptor } from '@nestjs/platform-express';
+import { uploadFileStorage } from 'src/utils';
 @ApiTags('用户模块')
 @Controller('user')
 export class UserController {
@@ -192,5 +193,40 @@ export class UserController {
   @RequireLogin()
   async getUserInfo(@UserInfo('userId') userId: number) {
     return await this.userService.findUserDetailById(userId);
+  }
+
+  @ApiOperation({ summary: '上传文件' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: '上传文件成功',
+    type: String,
+  }) 
+  @Post('upload')
+  @RequireLogin()
+  @UseInterceptors(FileInterceptor('file', {
+    storage: uploadFileStorage(),
+    limits: {
+      fileSize: 1024 * 1024 * 3,
+    },
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image')) {
+        cb(null, true);
+      } else {
+        cb(new BadRequestException('文件类型不支持'), false);
+      }
+    },
+  }))
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    console.log('file', file);
+    return `http://localhost:3003/uploads/${file.filename}`;
   }
 }
