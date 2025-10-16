@@ -14,6 +14,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { APP_GUARD } from '@nestjs/core';
 import { LoginGuard } from './guards/login.guard';
 import { PermissionGuard } from './guards/permission.guard';
+import * as path from 'path';
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
@@ -50,7 +51,8 @@ import { PermissionGuard } from './guards/permission.guard';
     }),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['src/.env'],
+      // envFilePath: ['src/.env'],
+      envFilePath: path.join(__dirname, '.env'),
     }),
     UserModule,
     RedisModule,
